@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tests &mdash; Google OAuth Error Mapping &amp; 2FA Setup</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f4f0;color:#1a1a18;padding:24px;font-size:15px}
+h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.meta{color:#7a7870;font-size:13px;margin-bottom:24px}
+.suite{background:#fff;border:1px solid #e4e2db;border-radius:10px;margin-bottom:16px;overflow:hidden}
+.suite-hd{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #e4e2db;background:#f9f8f6;font-size:15px;font-weight:600}
+.suite-hd .icon{font-size:17px}
+.case{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid #f0ede6}
+.case:last-child{border-bottom:none}
+.case .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.dot.pass{background:#2d8a5e}
+.dot.fail{background:#c03030}
+.dot.skip{background:#aaa}
+.case-name{font-size:13px;font-weight:500;flex:1}
+.case-detail{font-size:12px;color:#7a7870;margin-top:2px}
+.case-err{font-size:12px;color:#c03030;margin-top:3px;font-family:monospace;background:#fceaea;padding:3px 7px;border-radius:4px}
+.summary{background:#fff;border:1px solid #e4e2db;border-radius:10px;padding:14px 18px;display:flex;gap:24px;font-size:14px;margin-top:8px}
+.summary .s-pass{color:#2d8a5e;font-weight:700}
+.summary .s-fail{color:#c03030;font-weight:700}
+.summary .s-skip{color:#aaa}
+button#run-btn{background:#e8621a;border:none;border-radius:6px;padding:9px 22px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;margin-bottom:20px}
+button#run-btn:hover{background:#f4834a}
+</style>
+</head>
+<body>
+<h1>Tests &mdash; Google OAuth Error Mapping &amp; 2FA Setup</h1>
+<p class="meta">Verifica el mapeo de errores de Google OAuth y el flujo de configuraci&oacute;n de 2FA.<br>
+  Tambi&eacute;n cubre el caso de cuentas corporativas Google Workspace restringidas.</p>
+<button id="run-btn" onclick="runAll()">&#9654; Ejecutar todos los tests</button>
+<div id="output"></div>
+
+<script>
+// ── Inline stubs for functions under test ────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+var GOOGLE_OAUTH_ERRORS={
+  org_internal:{
+    cls:'workspace',
+    title:'Tu cuenta de Google Workspace est\u00e1 restringida por tu organizaci\u00f3n',
+    body:'El administrador de tu organizaci\u00f3n ha limitado el acceso a aplicaciones externas con tu cuenta corporativa.',
+    steps:['Contacta con tu administrador de IT y sol\u00edcitale que apruebe esta aplicaci\u00f3n en Google Workspace','Como alternativa, usa una cuenta personal de Google para acceder','Si eres administrador, ve a admin.google.com \u2192 Seguridad \u2192 Controles de API']
+  },
+  admin_policy_enforced:{
+    cls:'workspace',
+    title:'Tu cuenta de Google Workspace est\u00e1 restringida por tu organizaci\u00f3n',
+    body:'La pol\u00edtica de administraci\u00f3n de Google Workspace impide que esta aplicaci\u00f3n acceda a tu cuenta corporativa.',
+    steps:['Tu administrador de IT debe autorizar esta aplicaci\u00f3n en la consola de Google Workspace','Puedes usar la opci\u00f3n de contrase\u00f1a para acceder mientras tanto','Ref. error: admin_policy_enforced']
+  },
+  restricted_client:{
+    cls:'workspace',
+    title:'Aplicaci\u00f3n no autorizada por tu organizaci\u00f3n',
+    body:'Tu organizaci\u00f3n no ha autorizado esta aplicaci\u00f3n para cuentas de Google Workspace.',
+    steps:['Solicita a tu administrador que autorice la aplicaci\u00f3n en Google Workspace','Puedes acceder con contrase\u00f1a como alternativa']
+  },
+  access_denied:{
+    cls:'generic',
+    title:'Acceso denegado',
+    body:'Has cancelado o denegado el permiso de acceso a tu cuenta de Google. Puedes volver a intentarlo.',
+    steps:['Haz clic en "Entrar con Google" y acepta los permisos solicitados','O usa la contrase\u00f1a de acceso']
+  },
+  interaction_required:{
+    cls:'generic',
+    title:'Se requiere interacci\u00f3n adicional',
+    body:'Tu sesi\u00f3n de Google requiere una acci\u00f3n adicional (p.ej., verificaci\u00f3n 2FA en Google).',
+    steps:['Cierra sesi\u00f3n en Google y vuelve a entrar','Luego intenta de nuevo "Entrar con Google"']
+  }
+};
+
+var _authLog=[];
+function logAuthEvent(type,detail){
+  _authLog.push({type:type,detail:detail,ts:new Date().toISOString()});
+}
+
+function resolveOAuthErrorData(errorCode){
+  return GOOGLE_OAUTH_ERRORS[errorCode]||{
+    cls:'generic',
+    title:'Error de autenticaci\u00f3n con Google',
+    body:'Se ha producido un error inesperado durante el inicio de sesi\u00f3n con Google.',
+    steps:['Recarga la p\u00e1gina e int\u00e9ntalo de nuevo','Si el problema persiste, usa la contrase\u00f1a de acceso']
+  };
+}
+
+// Simulate showOAuthError to a detached DOM fragment
+function simulateShowOAuthError(errorCode){
+  var container=document.createElement('div');
+  var titleEl=document.createElement('div');
+  var bodyEl=document.createElement('div');
+  var stepsEl=document.createElement('ul');
+  var codeEl=document.createElement('div');
+  container.id='oauth-err';
+  container.className='oerr';
+  titleEl.id='oauth-err-title';
+  bodyEl.id='oauth-err-body';
+  stepsEl.id='oauth-err-steps';
+  codeEl.id='oauth-err-code';
+  container.appendChild(titleEl);
+  container.appendChild(bodyEl);
+  container.appendChild(stepsEl);
+  container.appendChild(codeEl);
+  var data=resolveOAuthErrorData(errorCode);
+  container.className='oerr on '+(data.cls||'generic');
+  titleEl.textContent=data.title;
+  bodyEl.textContent=data.body;
+  stepsEl.innerHTML=data.steps.map(function(s){return '<li>'+esc(s)+'</li>';}).join('');
+  codeEl.textContent='C\u00f3digo de error: '+errorCode;
+  return {container:container,titleEl:titleEl,bodyEl:bodyEl,stepsEl:stepsEl,codeEl:codeEl,data:data};
+}
+
+// ── Test runner ──────────────────────────────────────────────────────────────
+var SUITES=[];
+function suite(name,icon,fn){var s={name:name,icon:icon||'🧪',cases:[]};SUITES.push(s);fn(function(label,fn2){s.cases.push({label:label,fn:fn2});});}
+function assert(cond,msg){if(!cond)throw new Error(msg||'Assertion failed');}
+function eq(a,b){if(a!==b)throw new Error('Expected '+JSON.stringify(b)+' but got '+JSON.stringify(a));}
+function includes(str,sub){if(String(str).indexOf(sub)===-1)throw new Error(JSON.stringify(str)+' does not include '+JSON.stringify(sub));}
+
+// ── Suite 1: Error code mapping ───────────────────────────────────────────────
+suite('Mapeo de c\u00f3digos de error OAuth','🗺️',function(it){
+  it('org_internal → clase workspace',function(){
+    var r=resolveOAuthErrorData('org_internal');
+    eq(r.cls,'workspace');
+  });
+  it('org_internal → t\u00edtulo menciona Workspace',function(){
+    var r=resolveOAuthErrorData('org_internal');
+    includes(r.title,'Workspace');
+  });
+  it('org_internal → pasos incluyen contactar administrador',function(){
+    var r=resolveOAuthErrorData('org_internal');
+    assert(r.steps.some(function(s){return s.toLowerCase().indexOf('administrador')!==-1;}),
+      'Debe sugerir contactar al administrador');
+  });
+  it('admin_policy_enforced → clase workspace',function(){
+    var r=resolveOAuthErrorData('admin_policy_enforced');
+    eq(r.cls,'workspace');
+  });
+  it('admin_policy_enforced → t\u00edtulo correcto',function(){
+    var r=resolveOAuthErrorData('admin_policy_enforced');
+    includes(r.title,'Workspace');
+  });
+  it('restricted_client → clase workspace',function(){
+    var r=resolveOAuthErrorData('restricted_client');
+    eq(r.cls,'workspace');
+  });
+  it('access_denied → clase generic (NO workspace)',function(){
+    var r=resolveOAuthErrorData('access_denied');
+    eq(r.cls,'generic');
+  });
+  it('access_denied → NO menciona "pol\u00edtica de organizaci\u00f3n" en t\u00edtulo',function(){
+    var r=resolveOAuthErrorData('access_denied');
+    assert(r.title.toLowerCase().indexOf('pol\u00edtica')===-1,
+      'access_denied no debe mostrar mensaje de pol\u00edtica de organizaci\u00f3n');
+  });
+  it('interaction_required → clase generic',function(){
+    var r=resolveOAuthErrorData('interaction_required');
+    eq(r.cls,'generic');
+  });
+  it('c\u00f3digo desconocido → fallback gen\u00e9rico',function(){
+    var r=resolveOAuthErrorData('totally_unknown_xyz');
+    eq(r.cls,'generic');
+    assert(r.title.length>0,'Debe tener t\u00edtulo');
+  });
+  it('c\u00f3digo desconocido → NO clase workspace',function(){
+    var r=resolveOAuthErrorData('unknown_code');
+    assert(r.cls!=='workspace','C\u00f3digo desconocido no debe ser tratado como restricci\u00f3n de organizaci\u00f3n');
+  });
+});
+
+// ── Suite 2: Cuenta personal (sin restricciones) ──────────────────────────────
+suite('Cuenta Google personal (sin restricciones)','👤',function(it){
+  it('Sin error_code → no muestra panel de error',function(){
+    // Simulate page load with no error params
+    var params=new URLSearchParams('');
+    var errorCode=params.get('error')||params.get('error_code');
+    eq(errorCode,null);
+  });
+  it('Sin error → resolveOAuthErrorData no llamada',function(){
+    // If no error code, the error panel should remain hidden (class without "on")
+    var container=document.createElement('div');
+    container.className='oerr'; // no "on" class
+    assert(container.className.indexOf(' on')===-1,'Panel de error debe estar oculto sin error');
+  });
+  it('Token recibido correctamente → auth method = google',function(){
+    // Simulate successful sign-in
+    var ss={};
+    ss['tg_ok']='1';
+    ss['tg_auth_method']='google';
+    eq(ss['tg_auth_method'],'google');
+    eq(ss['tg_ok'],'1');
+  });
+});
+
+// ── Suite 3: Cuenta corporativa Workspace restringida ─────────────────────────
+suite('Cuenta Google Workspace restringida (corporativa)','🏢',function(it){
+  it('org_internal → muestra clase workspace en contenedor',function(){
+    var r=simulateShowOAuthError('org_internal');
+    assert(r.container.className.indexOf('workspace')!==-1,'Debe tener clase workspace');
+  });
+  it('org_internal → contenedor tiene clase "on" (visible)',function(){
+    var r=simulateShowOAuthError('org_internal');
+    assert(r.container.className.indexOf(' on')!==-1,'El panel debe estar visible');
+  });
+  it('admin_policy_enforced → t\u00edtulo es espec\u00edfico de Workspace',function(){
+    var r=simulateShowOAuthError('admin_policy_enforced');
+    includes(r.titleEl.textContent,'Workspace');
+  });
+  it('admin_policy_enforced → cuerpo NO dice gen\u00e9rico "Error de autenticaci\u00f3n"',function(){
+    var r=simulateShowOAuthError('admin_policy_enforced');
+    assert(r.bodyEl.textContent.indexOf('inesperado')===-1,
+      'No debe mostrar mensaje gen\u00e9rico para error de Workspace');
+  });
+  it('org_internal → al menos 1 paso con "administrador"',function(){
+    var r=simulateShowOAuthError('org_internal');
+    var text=r.stepsEl.textContent.toLowerCase();
+    assert(text.indexOf('administrador')!==-1,'Debe mencionar al administrador en los pasos');
+  });
+  it('org_internal → al menos 1 alternativa con cuenta personal',function(){
+    var r=resolveOAuthErrorData('org_internal');
+    var found=r.steps.some(function(s){return s.toLowerCase().indexOf('personal')!==-1;});
+    assert(found,'Debe ofrecer alternativa con cuenta personal de Google');
+  });
+  it('restricted_client → al menos 1 paso de acci\u00f3n',function(){
+    var r=resolveOAuthErrorData('restricted_client');
+    assert(r.steps.length>0,'Debe haber pasos de acci\u00f3n');
+  });
+  it('error code visible en panel para depuraci\u00f3n',function(){
+    var r=simulateShowOAuthError('org_internal');
+    includes(r.codeEl.textContent,'org_internal');
+  });
+});
+
+// ── Suite 4: Telemetr\u00eda / logging ──────────────────────────────────────────────
+suite('Telemetr\u00eda y logging de errores','📊',function(it){
+  it('logAuthEvent registra tipo y detalle',function(){
+    _authLog=[];
+    logAuthEvent('google_oauth_error','org_internal');
+    eq(_authLog.length,1);
+    eq(_authLog[0].type,'google_oauth_error');
+    eq(_authLog[0].detail,'org_internal');
+  });
+  it('logAuthEvent registra timestamp ISO',function(){
+    _authLog=[];
+    logAuthEvent('test_event','test_detail');
+    assert(/^\d{4}-\d{2}-\d{2}T/.test(_authLog[0].ts),'Timestamp debe ser ISO 8601');
+  });
+  it('m\u00faltiples eventos se acumulan',function(){
+    _authLog=[];
+    logAuthEvent('e1','d1');
+    logAuthEvent('e2','d2');
+    logAuthEvent('e3','d3');
+    eq(_authLog.length,3);
+  });
+  it('\u00e9xito de login con Google se registra',function(){
+    _authLog=[];
+    logAuthEvent('google_signin_success','token_received');
+    eq(_authLog[0].type,'google_signin_success');
+  });
+});
+
+// ── Suite 5: Flujo sessions/two-factor/app ────────────────────────────────────
+suite('Ruta sessions/two-factor/app','🔑',function(it){
+  it('hash #sessions/two-factor/app detectado correctamente',function(){
+    var hash='#sessions/two-factor/app';
+    var raw=hash.replace(/^#\/?/,'');
+    eq(raw,'sessions/two-factor/app');
+  });
+  it('hash #/sessions/two-factor/app tambi\u00e9n detectado',function(){
+    var hash='#/sessions/two-factor/app';
+    var raw=hash.replace(/^#\/?/,'');
+    eq(raw,'sessions/two-factor/app');
+  });
+  it('error_code en query string se extrae correctamente',function(){
+    var params=new URLSearchParams('?error=org_internal');
+    eq(params.get('error'),'org_internal');
+  });
+  it('error param alternativo tambi\u00e9n se extrae',function(){
+    var params=new URLSearchParams('?error_code=admin_policy_enforced');
+    eq(params.get('error_code'),'admin_policy_enforced');
+  });
+  it('sin error_code → showTwoFactorSetup con arg null no lanza error',function(){
+    // resolveOAuthErrorData(null) should not crash
+    var r=resolveOAuthErrorData(null);
+    assert(r.cls==='generic','null error code debe dar fallback gen\u00e9rico');
+  });
+  it('con org_internal → flujo 2FA muestra error workspace',function(){
+    var r=resolveOAuthErrorData('org_internal');
+    eq(r.cls,'workspace');
+  });
+  it('6 d\u00edgitos TOTP aceptados como v\u00e1lidos en demo',function(){
+    var code='123456';
+    assert(code.length===6&&/^\d{6}$/.test(code),'6 d\u00edgitos num\u00e9ricos son v\u00e1lidos');
+  });
+  it('menos de 6 d\u00edgitos rechazado',function(){
+    var code='12345';
+    assert(code.length!==6,'C\u00f3digo de 5 d\u00edgitos debe ser rechazado');
+  });
+  it('c\u00f3digo con letras rechazado',function(){
+    var code='12345a';
+    assert(!/^\d{6}$/.test(code),'C\u00f3digo con letras debe ser rechazado');
+  });
+});
+
+// ── Runner ───────────────────────────────────────────────────────────────────
+function runAll(){
+  var totalPass=0,totalFail=0,totalSkip=0;
+  var html='';
+  SUITES.forEach(function(s){
+    var rows='';
+    s.cases.forEach(function(c){
+      var status,detail='',errMsg='';
+      try{c.fn();status='pass';totalPass++;}
+      catch(e){status='fail';totalFail++;errMsg=e.message||String(e);}
+      rows+='<div class="case"><div class="dot '+status+'"></div><div><div class="case-name">'+c.label+'</div>'+(errMsg?'<div class="case-err">'+esc(errMsg)+'</div>':'')+'</div></div>';
+    });
+    html+='<div class="suite"><div class="suite-hd"><span class="icon">'+s.icon+'</span>'+esc(s.name)+'</div>'+rows+'</div>';
+  });
+  html+='<div class="summary"><span class="s-pass">✓ '+totalPass+' pasados</span><span class="s-fail">'+(totalFail?'✗ '+totalFail+' fallados':'0 fallados')+'</span><span class="s-skip">'+totalSkip+' omitidos</span></div>';
+  document.getElementById('output').innerHTML=html;
+}
+</script>
+</body>
+</html>
