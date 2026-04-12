@@ -8,6 +8,11 @@
  *  - non-org auth/2FA errors (invalid_code, expired, etc.) show the generic retry
  *    message WITHOUT showing the org-blocked message.
  *  - valid 6-digit codes authenticate the user successfully.
+ *
+ * NOTE: _check2FA below mirrors the implementation in index.html.
+ * Since this is a single-file HTML app with no module system, the function is
+ * duplicated here intentionally. Any change to _check2FA in index.html must be
+ * reflected here, and vice versa.
  */
 
 'use strict';
@@ -85,8 +90,6 @@ console.log('\n[doVerify2FA] org_blocked from backend → show_org_blocked ONLY'
     outcome = 'show_generic_error';
   }
   expect('org_blocked backend error → show_org_blocked', outcome, 'show_org_blocked');
-  expect('org_blocked does NOT fall to generic error',    outcome !== 'show_generic_error', true);
-  expect('org_blocked does NOT authenticate user',        outcome !== 'authenticated',      true);
 })();
 
 console.log('\n[doVerify2FA] Other backend errors → generic error (NOT org-blocked)');
