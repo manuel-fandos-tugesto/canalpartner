@@ -402,7 +402,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       </div>
       <div id="inbox-thread" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:9px;min-height:280px"></div>
       <div style="padding:10px 14px;border-top:1px solid #e4e2db;display:flex;flex-direction:column;gap:6px">
-        <div id="inbox-attach-preview" style="display:none;padding:4px 8px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#1a1a18;display:flex;align-items:center;gap:6px"></div>
+        <div id="inbox-attach-preview" style="display:none;padding:4px 8px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#1a1a18;align-items:center;gap:6px"></div>
         <div style="display:flex;gap:8px">
           <input type="file" id="inbox-attach-file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" style="display:none" onchange="inboxAttachChange(this)">
           <button class="btn sml" title="Adjuntar archivo" onclick="document.getElementById('inbox-attach-file').click()" style="padding:0 10px;font-size:16px;line-height:1">&#128206;</button>
@@ -681,7 +681,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
     <div style="background:#fff;border:1px solid #e4e2db;border-radius:10px;overflow:hidden">
       <div id="p-thread" style="padding:14px;min-height:300px;display:flex;flex-direction:column;gap:9px"></div>
       <div style="padding:10px 14px;border-top:1px solid #e4e2db;display:flex;flex-direction:column;gap:6px">
-        <div id="p-attach-preview" style="display:none;padding:4px 8px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#1a1a18;display:flex;align-items:center;gap:6px"></div>
+        <div id="p-attach-preview" style="display:none;padding:4px 8px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#1a1a18;align-items:center;gap:6px"></div>
         <div style="display:flex;gap:8px">
           <input type="file" id="p-attach-file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" style="display:none" onchange="pAttachChange(this)">
           <button class="btn sml" title="Adjuntar archivo" onclick="document.getElementById('p-attach-file').click()" style="padding:0 10px;font-size:16px;line-height:1">&#128206;</button>
@@ -936,6 +936,7 @@ var TYPE_ICON={pdf:'PDF',pptx:'PPT',docx:'DOC',xlsx:'XLS',video:'VID',link:'URL'
 var TYPE_COL={pdf:'#c03030',pptx:'#d04010',docx:'#1a6bb5',xlsx:'#2d8a5e',video:'#6b1ab5',link:'#b07a10'};
 // ── HELPERS ────────────────────────────────────────────────────────────────────
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function safeBlobUrl(url){return (typeof url==='string'&&url.startsWith('blob:'))?url:'#';}
 var _tTm=null;
 function toast(msg){var d=document.createElement('div');d.className='tst';d.textContent=msg;document.getElementById('toast').appendChild(d);setTimeout(function(){d.remove();},2800);}
 function flsh(msg){var b=document.getElementById('ibar');if(!b)return;b.querySelector('#iname').textContent='';b.style.background='rgba(45,138,94,.12)';b.style.borderBottomColor='rgba(45,138,94,.3)';var sp=document.createElement('span');sp.textContent=msg;sp.style.color='#2d8a5e';b.appendChild(sp);b.classList.add('on');setTimeout(function(){b.classList.remove('on');sp.remove();b.style.background='';b.style.borderBottomColor='';},2500);}
@@ -1427,9 +1428,9 @@ function openConv(id){
       var isPdf=m.fileType==='application/pdf'||m.fileName.toLowerCase().endsWith('.pdf');
       var isImg=/^image\//.test(m.fileType||'');
       if(isImg&&m.fileUrl){
-        attachHtml='<div style="margin-top:6px"><img src="'+m.fileUrl+'" style="max-width:180px;max-height:140px;border-radius:6px;display:block" alt="'+esc(m.fileName)+'"></div>';
+        attachHtml='<div style="margin-top:6px"><img src="'+safeBlobUrl(m.fileUrl)+'" style="max-width:180px;max-height:140px;border-radius:6px;display:block" alt="'+esc(m.fileName)+'"></div>';
       } else {
-        attachHtml='<div style="margin-top:6px"><a href="'+(m.fileUrl||'#')+'" download="'+esc(m.fileName)+'" style="display:inline-flex;align-items:center;gap:5px;background:'+(isAdmin?'rgba(255,255,255,.12)':'rgba(0,0,0,.06)')+';border-radius:6px;padding:5px 8px;text-decoration:none;color:'+(isAdmin?'#fff':'#1a1a18')+'"><span style="font-size:13px">'+(isPdf?'📄':'📎')+'</span><span style="font-size:12px;font-weight:600">'+esc(m.fileName)+'</span></a></div>';
+        attachHtml='<div style="margin-top:6px"><a href="'+safeBlobUrl(m.fileUrl)+'" download="'+esc(m.fileName)+'" style="display:inline-flex;align-items:center;gap:5px;background:'+(isAdmin?'rgba(255,255,255,.12)':'rgba(0,0,0,.06)')+';border-radius:6px;padding:5px 8px;text-decoration:none;color:'+(isAdmin?'#fff':'#1a1a18')+'"><span style="font-size:13px">'+(isPdf?'📄':'📎')+'</span><span style="font-size:12px;font-weight:600">'+esc(m.fileName)+'</span></a></div>';
       }
     }
     return '<div style="display:flex;justify-content:'+(isAdmin?'flex-end':'flex-start')+'"><div style="max-width:75%;background:'+(isAdmin?'#111':'#f5f4f0')+';color:'+(isAdmin?'#fff':'#1a1a18')+';border-radius:'+(isAdmin?'12px 12px 2px 12px':'12px 12px 12px 2px')+';padding:9px 12px">'+(m.text?'<div style="font-size:13px;line-height:1.4">'+esc(m.text)+'</div>':'')+attachHtml+'<div style="font-size:10px;color:'+(isAdmin?'rgba(255,255,255,.4)':'#aaa')+';margin-top:4px;text-align:right">'+m.ts+'</div></div></div>';
@@ -1439,7 +1440,7 @@ function openConv(id){
 function inboxAttachChange(inp){
   var prev=document.getElementById('inbox-attach-preview');if(!prev)return;
   if(inp.files&&inp.files[0]){
-    prev.style.display='flex';
+    prev.style.cssText='display:flex;padding:4px 8px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#1a1a18;align-items:center;gap:6px';
     prev.innerHTML='<span style="font-size:13px">📎</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(inp.files[0].name)+'</span><span onclick="inboxAttachClear()" style="cursor:pointer;color:#c03030;font-size:14px;flex-shrink:0">✕</span>';
   } else {prev.style.display='none';prev.innerHTML='';}
 }
@@ -1472,9 +1473,9 @@ function loadPartnerMsgs(){
       var isPdf=m.fileType==='application/pdf'||m.fileName.toLowerCase().endsWith('.pdf');
       var isImg=/^image\//.test(m.fileType||'');
       if(isImg&&m.fileUrl){
-        attachHtml='<div style="margin-top:6px"><img src="'+m.fileUrl+'" style="max-width:180px;max-height:140px;border-radius:6px;display:block" alt="'+esc(m.fileName)+'"></div>';
+        attachHtml='<div style="margin-top:6px"><img src="'+safeBlobUrl(m.fileUrl)+'" style="max-width:180px;max-height:140px;border-radius:6px;display:block" alt="'+esc(m.fileName)+'"></div>';
       } else {
-        attachHtml='<div style="margin-top:6px"><a href="'+(m.fileUrl||'#')+'" download="'+esc(m.fileName)+'" style="display:inline-flex;align-items:center;gap:5px;background:'+(isP?'rgba(255,255,255,.15)':'rgba(0,0,0,.06)')+';border-radius:6px;padding:5px 8px;text-decoration:none;color:'+(isP?'#fff':'#1a1a18')+'"><span style="font-size:13px">'+(isPdf?'📄':'📎')+'</span><span style="font-size:12px;font-weight:600">'+esc(m.fileName)+'</span></a></div>';
+        attachHtml='<div style="margin-top:6px"><a href="'+safeBlobUrl(m.fileUrl)+'" download="'+esc(m.fileName)+'" style="display:inline-flex;align-items:center;gap:5px;background:'+(isP?'rgba(255,255,255,.15)':'rgba(0,0,0,.06)')+';border-radius:6px;padding:5px 8px;text-decoration:none;color:'+(isP?'#fff':'#1a1a18')+'"><span style="font-size:13px">'+(isPdf?'📄':'📎')+'</span><span style="font-size:12px;font-weight:600">'+esc(m.fileName)+'</span></a></div>';
       }
     }
     return '<div style="display:flex;justify-content:'+(isP?'flex-end':'flex-start')+'"><div style="max-width:75%;background:'+(isP?'#e8621a':'#f5f4f0')+';color:'+(isP?'#fff':'#1a1a18')+';border-radius:12px;padding:9px 12px">'+(m.text?'<div style="font-size:13px;line-height:1.4">'+esc(m.text)+'</div>':'')+attachHtml+'<div style="font-size:10px;color:'+(isP?'rgba(255,255,255,.5)':'#aaa')+';margin-top:4px">'+m.ts+'</div></div></div>';
@@ -1484,7 +1485,7 @@ function loadPartnerMsgs(){
 function pAttachChange(inp){
   var prev=document.getElementById('p-attach-preview');if(!prev)return;
   if(inp.files&&inp.files[0]){
-    prev.style.display='flex';
+    prev.style.cssText='display:flex;padding:4px 8px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#1a1a18;align-items:center;gap:6px';
     prev.innerHTML='<span style="font-size:13px">📎</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(inp.files[0].name)+'</span><span onclick="pAttachClear()" style="cursor:pointer;color:#c03030;font-size:14px;flex-shrink:0">✕</span>';
   } else {prev.style.display='none';prev.innerHTML='';}
 }
