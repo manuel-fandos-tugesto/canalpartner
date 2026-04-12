@@ -401,9 +401,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
         <div><div style="font-size:14px;font-weight:600" id="inbox-pname">Selecciona una conversaci&oacute;n</div><div style="font-size:11px;color:#7a7870" id="inbox-pmeta"></div></div>
       </div>
       <div id="inbox-thread" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:9px;min-height:280px"></div>
-      <div style="padding:10px 14px;border-top:1px solid #e4e2db;display:flex;gap:8px">
-        <input id="inbox-reply" class="fi" style="flex:1" placeholder="Responder al partner...">
-        <button class="btn pri sml" onclick="sendReply()">Enviar</button>
+      <div style="padding:10px 14px;border-top:1px solid #e4e2db;display:flex;flex-direction:column;gap:6px">
+        <div id="inbox-attach-preview" style="display:none;padding:4px 8px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#1a1a18;display:flex;align-items:center;gap:6px"></div>
+        <div style="display:flex;gap:8px">
+          <input type="file" id="inbox-attach-file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" style="display:none" onchange="inboxAttachChange(this)">
+          <button class="btn sml" title="Adjuntar archivo" onclick="document.getElementById('inbox-attach-file').click()" style="padding:0 10px;font-size:16px;line-height:1">&#128206;</button>
+          <input id="inbox-reply" class="fi" style="flex:1" placeholder="Responder al partner...">
+          <button class="btn pri sml" onclick="sendReply()">Enviar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -675,9 +680,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
   <div id="p-msgs-list">
     <div style="background:#fff;border:1px solid #e4e2db;border-radius:10px;overflow:hidden">
       <div id="p-thread" style="padding:14px;min-height:300px;display:flex;flex-direction:column;gap:9px"></div>
-      <div style="padding:10px 14px;border-top:1px solid #e4e2db;display:flex;gap:8px">
-        <input id="p-reply" class="fi" style="flex:1" placeholder="Escribe tu mensaje a tugesto...">
-        <button class="btn pri sml" onclick="sendPartnerReply()">Enviar</button>
+      <div style="padding:10px 14px;border-top:1px solid #e4e2db;display:flex;flex-direction:column;gap:6px">
+        <div id="p-attach-preview" style="display:none;padding:4px 8px;background:#f5f4f0;border-radius:6px;font-size:12px;color:#1a1a18;display:flex;align-items:center;gap:6px"></div>
+        <div style="display:flex;gap:8px">
+          <input type="file" id="p-attach-file" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp" style="display:none" onchange="pAttachChange(this)">
+          <button class="btn sml" title="Adjuntar archivo" onclick="document.getElementById('p-attach-file').click()" style="padding:0 10px;font-size:16px;line-height:1">&#128206;</button>
+          <input id="p-reply" class="fi" style="flex:1" placeholder="Escribe tu mensaje a tugesto...">
+          <button class="btn pri sml" onclick="sendPartnerReply()">Enviar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1396,7 +1406,8 @@ function rINBOX(){
     var hasUnread=conv.msgs.some(function(m){return !m.read&&m.from==='partner';});
     if(hasUnread)unread++;
     var active=_activeInbox===conv.id;
-    return '<div onclick="openConv('+conv.id+')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0ede6;background:'+(active?'rgba(232,98,26,.05)':hasUnread?'#fffef4':'#fff')+'"><div style="display:flex;align-items:flex-start;gap:8px"><div style="width:30px;height:30px;border-radius:50%;background:#111;color:#e8621a;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+conv.ini+'</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:'+(hasUnread?700:500)+'">'+esc(conv.partner)+'</span>'+(hasUnread?'<span style="width:8px;height:8px;border-radius:50%;background:#e8621a;flex-shrink:0;margin-top:3px"></span>':'')+'</div><div style="font-size:11px;color:#7a7870;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(last.text.slice(0,50))+'</div><div style="font-size:10px;color:#aaa;margin-top:2px">'+last.ts+'</div></div></div></div>';
+    var lastPreview=last.text?esc(last.text.slice(0,50)):(last.fileName?'📎 '+esc(last.fileName):'');
+    return '<div onclick="openConv('+conv.id+')" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0ede6;background:'+(active?'rgba(232,98,26,.05)':hasUnread?'#fffef4':'#fff')+'"><div style="display:flex;align-items:flex-start;gap:8px"><div style="width:30px;height:30px;border-radius:50%;background:#111;color:#e8621a;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+conv.ini+'</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><span style="font-size:13px;font-weight:'+(hasUnread?700:500)+'">'+esc(conv.partner)+'</span>'+(hasUnread?'<span style="width:8px;height:8px;border-radius:50%;background:#e8621a;flex-shrink:0;margin-top:3px"></span>':'')+'</div><div style="font-size:11px;color:#7a7870;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+lastPreview+'</div><div style="font-size:10px;color:#aaa;margin-top:2px">'+last.ts+'</div></div></div></div>';
   }).join('');
   var nb=document.getElementById('nb-inbox');if(nb){nb.textContent=unread;nb.style.display=unread?'':'none';}
 }
@@ -1411,17 +1422,43 @@ function openConv(id){
   var thread=document.getElementById('inbox-thread');if(!thread)return;
   thread.innerHTML=conv.msgs.map(function(m){
     var isAdmin=m.from==='admin';
-    return '<div style="display:flex;justify-content:'+(isAdmin?'flex-end':'flex-start')+'"><div style="max-width:75%;background:'+(isAdmin?'#111':'#f5f4f0')+';color:'+(isAdmin?'#fff':'#1a1a18')+';border-radius:'+(isAdmin?'12px 12px 2px 12px':'12px 12px 12px 2px')+';padding:9px 12px"><div style="font-size:13px;line-height:1.4">'+esc(m.text)+'</div><div style="font-size:10px;color:'+(isAdmin?'rgba(255,255,255,.4)':'#aaa')+';margin-top:4px;text-align:right">'+m.ts+'</div></div></div>';
+    var attachHtml='';
+    if(m.fileName){
+      var isPdf=m.fileType==='application/pdf'||m.fileName.toLowerCase().endsWith('.pdf');
+      var isImg=/^image\//.test(m.fileType||'');
+      if(isImg&&m.fileUrl){
+        attachHtml='<div style="margin-top:6px"><img src="'+m.fileUrl+'" style="max-width:180px;max-height:140px;border-radius:6px;display:block" alt="'+esc(m.fileName)+'"></div>';
+      } else {
+        attachHtml='<div style="margin-top:6px"><a href="'+(m.fileUrl||'#')+'" download="'+esc(m.fileName)+'" style="display:inline-flex;align-items:center;gap:5px;background:'+(isAdmin?'rgba(255,255,255,.12)':'rgba(0,0,0,.06)')+';border-radius:6px;padding:5px 8px;text-decoration:none;color:'+(isAdmin?'#fff':'#1a1a18')+'"><span style="font-size:13px">'+(isPdf?'📄':'📎')+'</span><span style="font-size:12px;font-weight:600">'+esc(m.fileName)+'</span></a></div>';
+      }
+    }
+    return '<div style="display:flex;justify-content:'+(isAdmin?'flex-end':'flex-start')+'"><div style="max-width:75%;background:'+(isAdmin?'#111':'#f5f4f0')+';color:'+(isAdmin?'#fff':'#1a1a18')+';border-radius:'+(isAdmin?'12px 12px 2px 12px':'12px 12px 12px 2px')+';padding:9px 12px">'+(m.text?'<div style="font-size:13px;line-height:1.4">'+esc(m.text)+'</div>':'')+attachHtml+'<div style="font-size:10px;color:'+(isAdmin?'rgba(255,255,255,.4)':'#aaa')+';margin-top:4px;text-align:right">'+m.ts+'</div></div></div>';
   }).join('');
   thread.scrollTop=thread.scrollHeight;
 }
+function inboxAttachChange(inp){
+  var prev=document.getElementById('inbox-attach-preview');if(!prev)return;
+  if(inp.files&&inp.files[0]){
+    prev.style.display='flex';
+    prev.innerHTML='<span style="font-size:13px">📎</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(inp.files[0].name)+'</span><span onclick="inboxAttachClear()" style="cursor:pointer;color:#c03030;font-size:14px;flex-shrink:0">✕</span>';
+  } else {prev.style.display='none';prev.innerHTML='';}
+}
+function inboxAttachClear(){
+  var fi=document.getElementById('inbox-attach-file');if(fi)fi.value='';
+  var prev=document.getElementById('inbox-attach-preview');if(prev){prev.style.display='none';prev.innerHTML='';}
+}
 function sendReply(){
   var inp=document.getElementById('inbox-reply');if(!inp||!_activeInbox)return;
-  var text=(inp.value||'').trim();if(!text)return;
+  var text=(inp.value||'').trim();
+  var fi=document.getElementById('inbox-attach-file');
+  var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null;
+  if(!text&&!file)return;
   var conv=INBOX.find(function(x){return x.id===_activeInbox;});if(!conv)return;
   var now=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-  conv.msgs.push({from:'admin',text:text,ts:'Hoy '+now,read:true});
-  inp.value='';openConv(_activeInbox);toast('Respuesta enviada ✓');
+  var msg={from:'admin',text:text||'',ts:'Hoy '+now,read:true};
+  if(file){msg.fileName=file.name;msg.fileType=file.type;msg.fileUrl=URL.createObjectURL(file);}
+  conv.msgs.push(msg);
+  inp.value='';inboxAttachClear();openConv(_activeInbox);toast('Respuesta enviada ✓');
 }
 function markAllRead(){INBOX.forEach(function(conv){conv.msgs.forEach(function(m){m.read=true;});});rINBOX();toast('Todos leídos');}
 function loadPartnerMsgs(){
@@ -1430,11 +1467,45 @@ function loadPartnerMsgs(){
   if(!p){thread.innerHTML='<div style="color:#7a7870;font-size:13px;text-align:center;padding:24px">Sin mensajes. Usa el botón "Nuevo mensaje" para contactar con tugesto.</div>';return;}
   thread.innerHTML=p.msgs.map(function(m){
     var isP=m.from==='partner';
-    return '<div style="display:flex;justify-content:'+(isP?'flex-end':'flex-start')+'"><div style="max-width:75%;background:'+(isP?'#e8621a':'#f5f4f0')+';color:'+(isP?'#fff':'#1a1a18')+';border-radius:12px;padding:9px 12px"><div style="font-size:13px;line-height:1.4">'+esc(m.text)+'</div><div style="font-size:10px;color:'+(isP?'rgba(255,255,255,.5)':'#aaa')+';margin-top:4px">'+m.ts+'</div></div></div>';
+    var attachHtml='';
+    if(m.fileName){
+      var isPdf=m.fileType==='application/pdf'||m.fileName.toLowerCase().endsWith('.pdf');
+      var isImg=/^image\//.test(m.fileType||'');
+      if(isImg&&m.fileUrl){
+        attachHtml='<div style="margin-top:6px"><img src="'+m.fileUrl+'" style="max-width:180px;max-height:140px;border-radius:6px;display:block" alt="'+esc(m.fileName)+'"></div>';
+      } else {
+        attachHtml='<div style="margin-top:6px"><a href="'+(m.fileUrl||'#')+'" download="'+esc(m.fileName)+'" style="display:inline-flex;align-items:center;gap:5px;background:'+(isP?'rgba(255,255,255,.15)':'rgba(0,0,0,.06)')+';border-radius:6px;padding:5px 8px;text-decoration:none;color:'+(isP?'#fff':'#1a1a18')+'"><span style="font-size:13px">'+(isPdf?'📄':'📎')+'</span><span style="font-size:12px;font-weight:600">'+esc(m.fileName)+'</span></a></div>';
+      }
+    }
+    return '<div style="display:flex;justify-content:'+(isP?'flex-end':'flex-start')+'"><div style="max-width:75%;background:'+(isP?'#e8621a':'#f5f4f0')+';color:'+(isP?'#fff':'#1a1a18')+';border-radius:12px;padding:9px 12px">'+(m.text?'<div style="font-size:13px;line-height:1.4">'+esc(m.text)+'</div>':'')+attachHtml+'<div style="font-size:10px;color:'+(isP?'rgba(255,255,255,.5)':'#aaa')+';margin-top:4px">'+m.ts+'</div></div></div>';
   }).join('');
   thread.scrollTop=thread.scrollHeight;
 }
-function sendPartnerMsg(){var inp=document.getElementById('p-reply');if(!inp)return;var t=(inp.value||'').trim();if(!t)return;var p=INBOX.find(function(x){return x.pid===curP;});if(!p){INBOX.push({id:INBOX.length+1,pid:curP,partner:(S.partners.find(function(x){return x.id===curP;})||{}).name||'',ini:'?',msgs:[]});p=INBOX[INBOX.length-1];}var now=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});p.msgs.push({from:'partner',text:t,ts:'Hoy '+now,read:false});inp.value='';loadPartnerMsgs();rINBOX();toast('Mensaje enviado ✓');}
+function pAttachChange(inp){
+  var prev=document.getElementById('p-attach-preview');if(!prev)return;
+  if(inp.files&&inp.files[0]){
+    prev.style.display='flex';
+    prev.innerHTML='<span style="font-size:13px">📎</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(inp.files[0].name)+'</span><span onclick="pAttachClear()" style="cursor:pointer;color:#c03030;font-size:14px;flex-shrink:0">✕</span>';
+  } else {prev.style.display='none';prev.innerHTML='';}
+}
+function pAttachClear(){
+  var fi=document.getElementById('p-attach-file');if(fi)fi.value='';
+  var prev=document.getElementById('p-attach-preview');if(prev){prev.style.display='none';prev.innerHTML='';}
+}
+function sendPartnerMsg(){
+  var inp=document.getElementById('p-reply');if(!inp)return;
+  var t=(inp.value||'').trim();
+  var fi=document.getElementById('p-attach-file');
+  var file=fi&&fi.files&&fi.files[0]?fi.files[0]:null;
+  if(!t&&!file)return;
+  var p=INBOX.find(function(x){return x.pid===curP;});
+  if(!p){INBOX.push({id:INBOX.length+1,pid:curP,partner:(S.partners.find(function(x){return x.id===curP;})||{}).name||'',ini:'?',msgs:[]});p=INBOX[INBOX.length-1];}
+  var now=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  var msg={from:'partner',text:t||'',ts:'Hoy '+now,read:false};
+  if(file){msg.fileName=file.name;msg.fileType=file.type;msg.fileUrl=URL.createObjectURL(file);}
+  p.msgs.push(msg);
+  inp.value='';pAttachClear();loadPartnerMsgs();rINBOX();toast('Mensaje enviado ✓');
+}
 function sendPartnerReply(){sendPartnerMsg();}
 function sendMassMsg(){var s=(document.getElementById('mmsg-sub').value||'').trim();var b=(document.getElementById('mmsg-body').value||'').trim();if(!s||!b){toast('Rellena asunto y mensaje');return;}cm('mmsg');toast('Mensaje enviado a partners ✓');}
 
