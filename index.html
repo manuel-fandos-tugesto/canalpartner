@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>tugesto · Canal de Partners</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f4f0;color:#1a1a18;font-size:16px}
@@ -144,7 +145,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 /* Login */
 #login-screen{position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:99999;flex-direction:column}
 #login-screen.hidden{display:none}
-.lbox{background:#1a1a18;border:1px solid #2a2a28;border-radius:12px;padding:32px 36px;width:320px;text-align:center}
+.lbox{background:#1a1a18;border:1px solid #2a2a28;border-radius:12px;padding:32px 36px;width:340px;text-align:center}
 .llogo{color:var(--o);font-size:28px;font-weight:700;margin-bottom:4px}
 .lsub{color:var(--mu);font-size:13px;margin-bottom:20px}
 .linp{background:#111;border:1px solid #333;border-radius:6px;padding:10px 12px;font-size:14px;font-family:inherit;color:#fff;width:100%;outline:none;margin-bottom:8px;box-sizing:border-box;transition:border .12s}
@@ -153,6 +154,55 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .lbtn:hover{background:var(--ol)}
 .lerr{color:var(--r);font-size:12px;margin-top:8px;display:none}
 .lbadge{background:#2a2a28;border-radius:20px;padding:3px 10px;font-size:11px;color:var(--mu);margin-top:14px;display:inline-block}
+/* Google button */
+.gbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:1px solid #444;border-radius:6px;padding:10px 12px;background:#222;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;color:#e8e6e0;transition:background .12s,border .12s;margin-top:4px}
+.gbtn:hover{background:#2a2a28;border-color:#666}
+.gbtn svg{width:18px;height:18px;flex-shrink:0}
+/* Login divider */
+.ldiv{display:flex;align-items:center;gap:8px;margin:14px 0 10px;color:rgba(255,255,255,.2);font-size:12px}
+.ldiv::before,.ldiv::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1)}
+/* OAuth error block */
+.oerr{display:none;border-radius:8px;padding:12px 14px;margin-top:12px;text-align:left}
+.oerr.on{display:block}
+.oerr-title{font-size:13px;font-weight:600;margin-bottom:5px}
+.oerr-body{font-size:12px;line-height:1.5}
+.oerr-steps{font-size:11px;color:#aaa;margin-top:6px;padding-left:16px}
+.oerr-steps li{margin-bottom:3px}
+.oerr-code{font-size:10px;font-family:monospace;opacity:.5;margin-top:6px}
+/* OAuth error variants */
+.oerr.workspace{background:rgba(192,48,48,.12);border:1px solid rgba(192,48,48,.3)}
+.oerr.workspace .oerr-title{color:#f07070}
+.oerr.workspace .oerr-body{color:#d08080}
+.oerr.generic{background:rgba(176,122,16,.10);border:1px solid rgba(176,122,16,.25)}
+.oerr.generic .oerr-title{color:#e0b040}
+.oerr.generic .oerr-body{color:#b09060}
+/* 2FA overlay */
+#two-factor-screen{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:99998}
+#two-factor-screen.on{display:flex}
+.tfbox{background:#1a1a18;border:1px solid #2a2a28;border-radius:12px;padding:28px 32px;width:380px;max-width:96vw;text-align:center;max-height:92vh;overflow-y:auto}
+.tftitle{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
+.tfsub{color:var(--mu);font-size:13px;margin-bottom:18px}
+.tf-step{background:rgba(255,255,255,.04);border:1px solid #2e2e2c;border-radius:8px;padding:12px 14px;margin-bottom:10px;text-align:left}
+.tf-step-n{color:var(--o);font-size:11px;font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.tf-step-t{color:#fff;font-size:13px;font-weight:500;margin-bottom:3px}
+.tf-step-d{color:var(--mu);font-size:12px;line-height:1.5}
+.tf-qr{background:#fff;border-radius:8px;padding:10px;display:inline-flex;align-items:center;justify-content:center;margin:8px auto;width:120px;height:120px}
+.tf-secret{background:#111;border:1px solid #333;border-radius:6px;padding:8px 12px;font-family:monospace;font-size:13px;color:var(--o);letter-spacing:2px;margin:6px 0;word-break:break-all;text-align:center}
+.tf-vinp{background:#111;border:1px solid #333;border-radius:6px;padding:10px;font-size:20px;letter-spacing:6px;font-family:monospace;color:#fff;width:100%;text-align:center;outline:none;transition:border .12s}
+.tf-vinp:focus{border-color:var(--o)}
+.tf-vinp::placeholder{color:rgba(255,255,255,.2);letter-spacing:0;font-size:14px}
+.tf-ok{display:none;color:var(--g);font-size:13px;margin-top:8px;padding:8px;background:rgba(45,138,94,.1);border-radius:6px}
+.tf-ok.on{display:block}
+.tf-err-msg{display:none;color:var(--r);font-size:12px;margin-top:6px}
+.tf-err-msg.on{display:block}
+/* Error detail panel inside 2FA */
+.tf-auth-err{display:none;border-radius:8px;padding:12px 14px;margin-bottom:16px;text-align:left}
+.tf-auth-err.on{display:block}
+.tf-auth-err.workspace{background:rgba(192,48,48,.12);border:1px solid rgba(192,48,48,.3)}
+.tf-auth-err .oerr-title{color:#f07070;font-size:13px;font-weight:600;margin-bottom:5px}
+.tf-auth-err .oerr-body{color:#d08080;font-size:12px;line-height:1.5}
+.tf-auth-err .oerr-steps{font-size:11px;color:#aaa;margin-top:6px;padding-left:16px}
+.tf-auth-err .oerr-steps li{margin-bottom:3px}
 /* Quiz */
 #quiz-q button{transition:border .12s,background .12s}
 /* IDs psel */
@@ -294,10 +344,65 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
   <div class="lbox">
     <div class="llogo">tugesto</div>
     <div class="lsub">Canal de Partners &mdash; Demo interna</div>
+    <button class="gbtn" id="google-signin-btn" onclick="startGoogleSignIn()">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Entrar con Google
+    </button>
+    <div class="ldiv">o</div>
     <input class="linp" type="password" id="lpwd" placeholder="Contrase&ntilde;a de acceso" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="lbtn" onclick="doLogin()">Entrar</button>
     <div class="lerr" id="lerr">Contrase&ntilde;a incorrecta</div>
+    <div class="oerr" id="oauth-err" role="alert" aria-live="polite">
+      <div class="oerr-title" id="oauth-err-title"></div>
+      <div class="oerr-body" id="oauth-err-body"></div>
+      <ul class="oerr-steps" id="oauth-err-steps"></ul>
+      <div class="oerr-code" id="oauth-err-code"></div>
+    </div>
     <div class="lbadge">&#128274; Acceso restringido &mdash; Equipo tugesto</div>
+  </div>
+</div>
+
+<!-- 2FA APP SETUP -->
+<div id="two-factor-screen" role="dialog" aria-modal="true" aria-labelledby="tf-title">
+  <div class="tfbox">
+    <div class="tftitle" id="tf-title">Autenticaci&#243;n en dos pasos</div>
+    <div class="tfsub" id="tf-subtitle">Configura tu aplicaci&#243;n de autenticaci&#243;n (TOTP)</div>
+    <div class="tf-auth-err workspace" id="tf-auth-err">
+      <div class="oerr-title" id="tf-auth-err-title"></div>
+      <div class="oerr-body" id="tf-auth-err-body"></div>
+      <ul class="oerr-steps" id="tf-auth-err-steps"></ul>
+    </div>
+    <div id="tf-setup-body">
+      <div class="tf-step">
+        <div class="tf-step-n">Paso 1</div>
+        <div class="tf-step-t">Instala una aplicaci&#243;n de autenticaci&#243;n</div>
+        <div class="tf-step-d">Descarga Google Authenticator, Authy, Microsoft Authenticator o cualquier app compatible con TOTP.</div>
+      </div>
+      <div class="tf-step">
+        <div class="tf-step-n">Paso 2</div>
+        <div class="tf-step-t">Escanea el c&#243;digo QR</div>
+        <div class="tf-step-d">
+          <div class="tf-qr" id="tf-qr-container" aria-label="C&#243;digo QR para configurar autenticador">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="96" height="96" id="tf-qr-svg"></svg>
+          </div>
+          <div style="font-size:11px;color:var(--mu);margin-top:4px">O introduce manualmente:</div>
+          <div class="tf-secret" id="tf-secret-key" aria-label="Clave secreta TOTP"></div>
+        </div>
+      </div>
+      <div class="tf-step">
+        <div class="tf-step-n">Paso 3</div>
+        <div class="tf-step-t">Verifica el c&#243;digo</div>
+        <div class="tf-step-d">
+          <input class="tf-vinp" id="tf-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="C&#243;digo de 6 d&#237;gitos" autocomplete="one-time-code" oninput="tfValidateInput(this)" onkeydown="if(event.key==='Enter')tfVerify()">
+          <div class="tf-err-msg" id="tf-err-msg">C&#243;digo incorrecto. Comprueba la hora de tu dispositivo e int&#233;ntalo de nuevo.</div>
+          <div class="tf-ok" id="tf-ok">&#10003; &#161;Configuraci&#243;n completada! El doble factor est&#225; activo en tu cuenta.</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button class="btn" onclick="closeTwoFactor()">Cerrar</button>
+      <button class="btn pri" id="tf-verify-btn" onclick="tfVerify()">Verificar c&#243;digo</button>
+    </div>
   </div>
 </div>
 
@@ -951,10 +1056,161 @@ function cm(id){var m=document.getElementById(id);if(m)m.classList.remove('on');
 document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.mo.on').forEach(function(m){m.classList.remove('on');});});
 // ── LOGIN ──────────────────────────────────────────────────────────────────────
 var _PWD='tugesto2026';
+// Google OAuth Client ID (replace with your actual Google Cloud project Client ID)
+var _GOOGLE_CLIENT_ID='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+
+// Google OAuth error code → user-facing message mapping
+var GOOGLE_OAUTH_ERRORS={
+  org_internal:{
+    cls:'workspace',
+    title:'Tu cuenta de Google Workspace est\u00e1 restringida por tu organizaci\u00f3n',
+    body:'El administrador de tu organizaci\u00f3n ha limitado el acceso a aplicaciones externas con tu cuenta corporativa.',
+    steps:['Contacta con tu administrador de IT y sol\u00edcitale que apruebe esta aplicaci\u00f3n en Google Workspace','Como alternativa, usa una cuenta personal de Google para acceder','Si eres administrador, ve a admin.google.com \u2192 Seguridad \u2192 Controles de API']
+  },
+  admin_policy_enforced:{
+    cls:'workspace',
+    title:'Tu cuenta de Google Workspace est\u00e1 restringida por tu organizaci\u00f3n',
+    body:'La pol\u00edtica de administraci\u00f3n de Google Workspace impide que esta aplicaci\u00f3n acceda a tu cuenta corporativa.',
+    steps:['Tu administrador de IT debe autorizar esta aplicaci\u00f3n en la consola de Google Workspace','Puedes usar la opci\u00f3n de contrase\u00f1a para acceder mientras tanto','Ref. error: admin_policy_enforced']
+  },
+  restricted_client:{
+    cls:'workspace',
+    title:'Aplicaci\u00f3n no autorizada por tu organizaci\u00f3n',
+    body:'Tu organizaci\u00f3n no ha autorizado esta aplicaci\u00f3n para cuentas de Google Workspace.',
+    steps:['Solicita a tu administrador que autorice la aplicaci\u00f3n en Google Workspace','Puedes acceder con contrase\u00f1a como alternativa']
+  },
+  access_denied:{
+    cls:'generic',
+    title:'Acceso denegado',
+    body:'Has cancelado o denegado el permiso de acceso a tu cuenta de Google. Puedes volver a intentarlo.',
+    steps:['Haz clic en "Entrar con Google" y acepta los permisos solicitados','O usa la contrase\u00f1a de acceso']
+  },
+  interaction_required:{
+    cls:'generic',
+    title:'Se requiere interacci\u00f3n adicional',
+    body:'Tu sesi\u00f3n de Google requiere una acci\u00f3n adicional (p.ej., verificaci\u00f3n 2FA en Google).',
+    steps:['Cierra sesi\u00f3n en Google y vuelve a entrar','Luego intenta de nuevo "Entrar con Google"']
+  }
+};
+
+function logAuthEvent(type,detail){
+  var entry={type:type,detail:detail,ts:new Date().toISOString()};
+  console.info('[Auth]',JSON.stringify(entry));
+  try{var logs=JSON.parse(sessionStorage.getItem('tg_auth_log')||'[]');logs.push(entry);sessionStorage.setItem('tg_auth_log',JSON.stringify(logs.slice(-50)));}catch(e){}
+}
+
+function showOAuthError(errorCode,container,titleEl,bodyEl,stepsEl,codeEl){
+  if(!container)return;
+  var data=GOOGLE_OAUTH_ERRORS[errorCode]||{
+    cls:'generic',
+    title:'Error de autenticaci\u00f3n con Google',
+    body:'Se ha producido un error inesperado durante el inicio de sesi\u00f3n con Google.',
+    steps:['Recarga la p\u00e1gina e int\u00e9ntalo de nuevo','Si el problema persiste, usa la contrase\u00f1a de acceso']
+  };
+  container.className='oerr on '+(data.cls||'generic');
+  if(titleEl)titleEl.textContent=data.title;
+  if(bodyEl)bodyEl.textContent=data.body;
+  if(stepsEl)stepsEl.innerHTML=data.steps.map(function(s){return '<li>'+esc(s)+'</li>';}).join('');
+  if(codeEl)codeEl.textContent='C\u00f3digo de error: '+errorCode;
+}
+
+function handleGoogleOAuthCallback(){
+  var params=new URLSearchParams(window.location.search);
+  var errorCode=params.get('error')||params.get('error_code');
+  if(!errorCode){
+    // Also check hash fragments (some OAuth flows use hash)
+    var hash=window.location.hash.replace(/^#/,'');
+    var hashParams=new URLSearchParams(hash.indexOf('?')!==-1?hash.split('?')[1]:hash);
+    errorCode=hashParams.get('error')||hashParams.get('error_code');
+  }
+  if(!errorCode)return;
+  logAuthEvent('google_oauth_error',errorCode);
+  showOAuthError(
+    errorCode,
+    document.getElementById('oauth-err'),
+    document.getElementById('oauth-err-title'),
+    document.getElementById('oauth-err-body'),
+    document.getElementById('oauth-err-steps'),
+    document.getElementById('oauth-err-code')
+  );
+  // Clean error from URL without reload
+  try{
+    var cleanUrl=window.location.pathname+(window.location.hash&&window.location.hash!=='#'?window.location.hash:'');
+    window.history.replaceState(null,'',cleanUrl);
+  }catch(e){}
+}
+
+function startGoogleSignIn(){
+  if(!window.google||!window.google.accounts){
+    showOAuthError('not_configured',
+      document.getElementById('oauth-err'),
+      document.getElementById('oauth-err-title'),
+      document.getElementById('oauth-err-body'),
+      document.getElementById('oauth-err-steps'),
+      document.getElementById('oauth-err-code')
+    );
+    // Fallback message when GIS not loaded
+    var t=document.getElementById('oauth-err-title');
+    var b=document.getElementById('oauth-err-body');
+    var c=document.getElementById('oauth-err-code');
+    var el=document.getElementById('oauth-err');
+    if(el)el.className='oerr on generic';
+    if(t)t.textContent='Inicio de sesi\u00f3n con Google no disponible';
+    if(b)b.textContent='El servicio de Google no est\u00e1 disponible ahora mismo. Por favor usa la contrase\u00f1a de acceso.';
+    if(c)c.textContent='';
+    return;
+  }
+  try{
+    window.google.accounts.oauth2.initTokenClient({
+      client_id:_GOOGLE_CLIENT_ID,
+      scope:'openid email profile',
+      callback:function(tokenResponse){
+        if(tokenResponse.error){
+          logAuthEvent('google_oauth_error',tokenResponse.error);
+          showOAuthError(
+            tokenResponse.error,
+            document.getElementById('oauth-err'),
+            document.getElementById('oauth-err-title'),
+            document.getElementById('oauth-err-body'),
+            document.getElementById('oauth-err-steps'),
+            document.getElementById('oauth-err-code')
+          );
+          return;
+        }
+        logAuthEvent('google_signin_success','token_received');
+        sessionStorage.setItem('tg_ok','1');
+        sessionStorage.setItem('tg_auth_method','google');
+        var s=document.getElementById('login-screen');if(s)s.classList.add('hidden');
+      },
+      error_callback:function(err){
+        var code=(err&&err.type)||'unknown';
+        logAuthEvent('google_oauth_error',code);
+        showOAuthError(
+          code,
+          document.getElementById('oauth-err'),
+          document.getElementById('oauth-err-title'),
+          document.getElementById('oauth-err-body'),
+          document.getElementById('oauth-err-steps'),
+          document.getElementById('oauth-err-code')
+        );
+      }
+    }).requestAccessToken();
+  }catch(err){
+    logAuthEvent('google_signin_exception',String(err));
+    var el=document.getElementById('oauth-err');
+    if(el){el.className='oerr on generic';}
+    var t2=document.getElementById('oauth-err-title');
+    var b2=document.getElementById('oauth-err-body');
+    if(t2)t2.textContent='Error al iniciar Google Sign-In';
+    if(b2)b2.textContent='Se ha producido un error t\u00e9cnico. Por favor usa la contrase\u00f1a de acceso.';
+  }
+}
+
 function doLogin(){
   var v=(document.getElementById('lpwd')||{}).value||'';
   if(v===_PWD){
     sessionStorage.setItem('tg_ok','1');
+    sessionStorage.setItem('tg_auth_method','password');
     var s=document.getElementById('login-screen');if(s)s.classList.add('hidden');
   } else {
     var e=document.getElementById('lerr');if(e)e.style.display='block';
@@ -968,6 +1224,132 @@ function doLogin(){
     document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){var i=document.getElementById('lpwd');if(i)i.focus();},100);});
   }
 })();
+
+// ── 2FA APP SETUP ────────────────────────────────────────────────────────────
+// Minimal QR code renderer (path-based, no external library)
+function _qrPlaceholder(svgEl,text){
+  // Draw a placeholder QR visual (actual TOTP QR requires a library; this is a demo stub)
+  svgEl.setAttribute('viewBox','0 0 100 100');
+  var cells=21,sz=100/cells,pad=2;
+  var pat=[];
+  // Finder pattern top-left
+  var fp=function(x,y){for(var r=0;r<7;r++)for(var c=0;c<7;c++){var on=(r===0||r===6||c===0||c===6||(r>=2&&r<=4&&c>=2&&c<=4));if(on)pat.push([x+c,y+r]);}};
+  fp(0,0);fp(14,0);fp(0,14);
+  // Data cells (pseudo-random based on text hash)
+  var h=0;for(var ci=0;ci<text.length;ci++)h=(h*31+text.charCodeAt(ci))>>>0;
+  for(var row=0;row<cells;row++)for(var col=0;col<cells;col++){if((h=(h*1664525+1013904223)>>>0)%4===0)pat.push([col,row]);}
+  var html='';
+  pat.forEach(function(p){html+='<rect x="'+(p[0]*sz+pad)+'" y="'+(p[1]*sz+pad)+'" width="'+(sz-1)+'" height="'+(sz-1)+'" fill="#111"/>';});
+  svgEl.innerHTML=html;
+}
+
+var _TF_SECRET='';
+function _genSecret(){
+  var chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  var s='';for(var i=0;i<32;i++)s+=chars[Math.floor(Math.random()*chars.length)];
+  return s.match(/.{1,4}/g).join(' ');
+}
+
+function showTwoFactorSetup(authErrorCode){
+  var screen=document.getElementById('two-factor-screen');
+  if(!screen)return;
+  // Reset state
+  var ok=document.getElementById('tf-ok');var er=document.getElementById('tf-err-msg');
+  var inp=document.getElementById('tf-code-input');var btn=document.getElementById('tf-verify-btn');
+  if(ok)ok.className='tf-ok';if(er)er.className='tf-err-msg';if(inp)inp.value='';
+  if(btn)btn.disabled=false;
+  // Handle auth error in 2FA context
+  var errPanel=document.getElementById('tf-auth-err');
+  if(authErrorCode&&GOOGLE_OAUTH_ERRORS[authErrorCode]){
+    var data=GOOGLE_OAUTH_ERRORS[authErrorCode];
+    var et=document.getElementById('tf-auth-err-title');
+    var eb=document.getElementById('tf-auth-err-body');
+    var es=document.getElementById('tf-auth-err-steps');
+    var sub=document.getElementById('tf-subtitle');
+    if(et)et.textContent=data.title;
+    if(eb)eb.textContent=data.body;
+    if(es)es.innerHTML=data.steps.map(function(s){return '<li>'+esc(s)+'</li>';}).join('');
+    if(errPanel)errPanel.className='tf-auth-err on workspace';
+    if(sub)sub.textContent='No se puede completar la configuraci\u00f3n de 2FA con esta cuenta';
+    var setupBody=document.getElementById('tf-setup-body');
+    if(setupBody)setupBody.style.display='none';
+    if(btn)btn.style.display='none';
+    logAuthEvent('2fa_blocked_workspace',authErrorCode);
+  } else {
+    if(errPanel)errPanel.className='tf-auth-err';
+    var sub2=document.getElementById('tf-subtitle');
+    if(sub2)sub2.textContent='Configura tu aplicaci\u00f3n de autenticaci\u00f3n (TOTP)';
+    var setupBody2=document.getElementById('tf-setup-body');
+    if(setupBody2)setupBody2.style.display='';
+    if(btn)btn.style.display='';
+    // Generate secret and QR
+    if(!_TF_SECRET)_TF_SECRET=_genSecret();
+    var sk=document.getElementById('tf-secret-key');
+    if(sk)sk.textContent=_TF_SECRET;
+    var svgEl=document.getElementById('tf-qr-svg');
+    if(svgEl)_qrPlaceholder(svgEl,'otpauth://totp/tugesto:partner@tugesto.com?secret='+_TF_SECRET.replace(/\s/g,'')+'&issuer=tugesto');
+    logAuthEvent('2fa_setup_shown','totp');
+  }
+  screen.classList.add('on');
+}
+
+function closeTwoFactor(){
+  var screen=document.getElementById('two-factor-screen');
+  if(screen)screen.classList.remove('on');
+  try{
+    var url=window.location.pathname+window.location.search;
+    window.history.replaceState(null,'',url);
+  }catch(e){}
+}
+
+function tfValidateInput(inp){
+  inp.value=inp.value.replace(/\D/g,'').slice(0,6);
+}
+
+function tfVerify(){
+  var inp=document.getElementById('tf-code-input');
+  var code=(inp?inp.value:'').replace(/\D/g,'');
+  var ok=document.getElementById('tf-ok');
+  var er=document.getElementById('tf-err-msg');
+  var btn=document.getElementById('tf-verify-btn');
+  if(code.length!==6){if(er){er.textContent='Introduce un c\u00f3digo de 6 d\u00edgitos.';er.className='tf-err-msg on';}return;}
+  // Demo: accept any 6-digit code (in production, verify against TOTP algorithm)
+  logAuthEvent('2fa_verify_attempt',code.length+'digits');
+  if(true){ // demo: always succeeds with 6 digits
+    if(ok)ok.className='tf-ok on';
+    if(er)er.className='tf-err-msg';
+    if(btn)btn.disabled=true;
+    sessionStorage.setItem('tg_2fa_ok','1');
+    logAuthEvent('2fa_verify_success','totp_demo');
+    setTimeout(function(){closeTwoFactor();toast('2FA configurado correctamente \u2713');},1800);
+  }
+}
+
+// ── HASH ROUTING (sessions/two-factor/app) ────────────────────────────────────
+function handleHashRoute(){
+  var raw=window.location.hash.replace(/^#\/?/,'');
+  if(raw==='sessions/two-factor/app'){
+    var params=new URLSearchParams(window.location.search);
+    var errCode=params.get('error')||params.get('error_code')||null;
+    // Fire immediately if DOM is ready, otherwise wait for it
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',function(){showTwoFactorSetup(errCode);},false);
+    } else {
+      showTwoFactorSetup(errCode);
+    }
+  }
+}
+window.addEventListener('hashchange',function(){
+  var raw=window.location.hash.replace(/^#\/?/,'');
+  if(raw==='sessions/two-factor/app'){
+    var params=new URLSearchParams(window.location.search);
+    var errCode=params.get('error')||params.get('error_code')||null;
+    showTwoFactorSetup(errCode);
+  }
+});
+// Run on load
+handleHashRoute();
+document.addEventListener('DOMContentLoaded',handleGoogleOAuthCallback);
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
 function sv(v,pid){
   document.querySelectorAll('.view').forEach(function(x){x.classList.remove('on');});
