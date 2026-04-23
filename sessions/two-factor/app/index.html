@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>tugesto · Verificación en dos pasos</title>
+<!-- qrcode.js generates QR codes entirely in the browser — no secret is
+     sent to any external server. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+        integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSi2jFXWp+m+L4Hz8SmWMch8sCUquAsOT5KQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="twofa.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f4f0;color:#1a1a18;font-size:16px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.wrap{width:100%;max-width:480px}
+/* Header bar */
+.hdr{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.hdr-logo{font-weight:800;font-size:18px;color:#1a1a18}.hdr-logo span{color:#e8621a}
+.hdr-sep{width:1px;height:18px;background:#d0cdc5}
+.hdr-ttl{font-size:14px;color:#7a7870}
+/* Card */
+.card{background:#fff;border:1px solid #e4e2db;border-radius:9px;overflow:hidden}
+.card-h{padding:16px 20px;border-bottom:1px solid #e4e2db;background:#f9f8f6}
+.card-h h1{font-size:16px;font-weight:600}
+.card-h p{font-size:13px;color:#7a7870;margin-top:3px}
+.card-b{padding:20px}
+/* Steps */
+.step{margin-bottom:20px}
+.step-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a7870;margin-bottom:6px}
+/* QR area */
+.qr-area{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px;background:#f9f8f6;border:1px solid #e4e2db;border-radius:7px}
+#qr-img{width:160px;height:160px;background:#e4e2db;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7a7870}
+#qr-img img{width:100%;height:100%;border-radius:5px}
+/* Secret key */
+.secret-row{display:flex;gap:6px;align-items:center}
+.secret-box{font-family:"SF Mono","Fira Code",monospace;font-size:13px;font-weight:600;letter-spacing:2px;padding:8px 12px;background:#f0ede8;border:1px solid #d0cdc5;border-radius:6px;flex:1;word-break:break-all;color:#1a1a18;user-select:all}
+.btn-copy{flex-shrink:0;padding:7px 12px;background:#1a1a18;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .12s}
+.btn-copy:hover{background:#333}
+/* Verify form */
+.inp{width:100%;padding:9px 12px;border:1px solid #d0cdc5;border-radius:6px;font-size:14px;font-family:inherit;letter-spacing:3px;text-align:center}
+.inp:focus{outline:none;border-color:#e8621a;box-shadow:0 0 0 2px rgba(232,98,26,.15)}
+.btn-prim{width:100%;padding:10px;background:#e8621a;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px;transition:background .12s}
+.btn-prim:hover{background:#d05415}
+.btn-prim:disabled{background:#c0bdb8;cursor:not-allowed}
+/* Feedback */
+.hint{font-size:12px;color:#7a7870;margin-top:6px}
+.ok-msg{display:none;align-items:center;gap:8px;padding:10px 14px;background:#eaf6f0;border:1px solid rgba(45,138,94,.25);border-radius:6px;font-size:13px;color:#2d8a5e;margin-top:10px}
+.ok-msg.on{display:flex}
+/* Error banners */
+.err-banner{display:none;border-radius:7px;padding:14px 16px;margin-bottom:16px;font-size:14px}
+.err-banner.on{display:block}
+.err-banner.org-blocked{background:#fceaea;border:1px solid rgba(192,48,48,.25);color:#8a1a1a}
+.err-banner.session{background:#fef6e3;border:1px solid rgba(176,122,16,.25);color:#7a4a00}
+.err-banner.forbidden{background:#fef6e3;border:1px solid rgba(176,122,16,.25);color:#7a4a00}
+.err-banner.network{background:#fceaea;border:1px solid rgba(192,48,48,.25);color:#8a1a1a}
+.err-banner.generic{background:#f0ede8;border:1px solid #d0cdc5;color:#5a5850}
+.err-title{font-weight:600;margin-bottom:4px}
+.err-action{font-size:12px;margin-top:8px;opacity:.85}
+/* Loading skeleton */
+.skeleton{background:linear-gradient(90deg,#e4e2db 25%,#ece9e4 50%,#e4e2db 75%);background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:5px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* Back link */
+.back{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#7a7870;text-decoration:none;margin-bottom:14px}
+.back:hover{color:#1a1a18}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="hdr">
+    <div class="hdr-logo"><span>tugesto</span></div>
+    <div class="hdr-sep"></div>
+    <div class="hdr-ttl">Seguridad de cuenta</div>
+  </div>
+
+  <a class="back" href="../../..">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M15 18l-6-6 6-6"/></svg>
+    Volver al inicio
+  </a>
+
+  <!-- Error banner — shown when setup cannot proceed -->
+  <div class="err-banner" id="err-banner" role="alert">
+    <div class="err-title" id="err-title"></div>
+    <div id="err-body"></div>
+    <div class="err-action" id="err-action"></div>
+  </div>
+
+  <!-- Setup card — shown on success -->
+  <div class="card" id="setup-card">
+    <div class="card-h">
+      <h1>Configura la verificación en dos pasos</h1>
+      <p>Usa una aplicación de autenticación (Google Authenticator, Authy, etc.)</p>
+    </div>
+    <div class="card-b">
+
+      <!-- Step 1: scan QR -->
+      <div class="step">
+        <div class="step-label">Paso 1 — Escanea el código QR</div>
+        <div class="qr-area">
+          <div id="qr-img" aria-label="Código QR">
+            <div class="skeleton" style="width:160px;height:160px;border-radius:5px"></div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:12px;color:#7a7870">¿No puedes escanear?</div>
+            <button style="background:none;border:none;color:#e8621a;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;padding:2px 0" onclick="toggleManual()">Introducir clave manualmente</button>
+          </div>
+        </div>
+        <div id="manual-row" style="display:none;margin-top:10px">
+          <div class="step-label">Clave secreta</div>
+          <div class="secret-row">
+            <div class="secret-box" id="secret-box">············</div>
+            <button class="btn-copy" id="copy-btn" onclick="copySecret()">Copiar</button>
+          </div>
+          <div class="hint">Introduce esta clave en tu aplicación de autenticación.</div>
+        </div>
+      </div>
+
+      <!-- Step 2: verify -->
+      <div class="step">
+        <div class="step-label">Paso 2 — Introduce el código de 6 dígitos</div>
+        <input class="inp" type="text" id="totp-input" inputmode="numeric" pattern="[0-9]{6}"
+               maxlength="6" placeholder="000000" autocomplete="one-time-code"
+               oninput="onCodeInput()">
+        <div class="hint">El código cambia cada 30 segundos.</div>
+        <div class="ok-msg" id="ok-msg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M20 6L9 17l-5-5"/></svg>
+          ¡Verificación en dos pasos activada correctamente!
+        </div>
+        <button class="btn-prim" id="verify-btn" onclick="verifyCode()" disabled>Verificar y activar</button>
+      </div>
+
+    </div>
+  </div><!-- /setup-card -->
+</div><!-- /wrap -->
+
+<script>
+'use strict';
+
+/* ── Configuration ─────────────────────────────────────────────────────────── */
+var SETUP_API_URL = '/api/sessions/two-factor/app/setup';
+
+/* ── State ──────────────────────────────────────────────────────────────────── */
+var _secret = null;
+
+/* ── Boot ───────────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', function () {
+  loadSetup();
+});
+
+/* ── Load setup data ────────────────────────────────────────────────────────── */
+function loadSetup() {
+  fetch(SETUP_API_URL, { credentials: 'same-origin' })
+    .then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (body) {
+          throw { status: res.status, body: body, headers: headersToMap(res.headers) };
+        });
+      }
+      return res.json();
+    })
+    .then(function (data) {
+      renderSetup(data);
+    })
+    .catch(function (err) {
+      var status  = err && err.status  != null ? err.status  : null;
+      var body    = err && err.body    != null ? err.body    : '';
+      var headers = err && err.headers != null ? err.headers : {};
+
+      var errorType = TwoFA.classifyError(status, body, headers);
+      showError(errorType, body);
+    });
+}
+
+/* ── Render setup ────────────────────────────────────────────────────────────── */
+function renderSetup(data) {
+  _secret = data.secret || '';
+
+  /* Build the otpauth URI */
+  var otpUri = 'otpauth://totp/tugesto%3A' + encodeURIComponent(data.email || 'user') +
+               '?secret=' + encodeURIComponent(_secret) +
+               '&issuer=tugesto&algorithm=SHA1&digits=6&period=30';
+
+  /* Generate QR code client-side (no secret sent to external servers) */
+  var qrEl = document.getElementById('qr-img');
+  qrEl.innerHTML = '';
+  /* eslint-disable no-new */
+  new QRCode(qrEl, {
+    text:         otpUri,
+    width:        160,
+    height:       160,
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  /* Show formatted secret in the manual entry box */
+  document.getElementById('secret-box').textContent = formatSecret(_secret);
+}
+
+/* ── Error display ──────────────────────────────────────────────────────────── */
+function showError(errorType, rawReason) {
+  var ET = TwoFA.ERROR_TYPES;
+
+  /* Hide the setup card */
+  var card = document.getElementById('setup-card');
+  if (card) card.style.display = 'none';
+
+  var banner   = document.getElementById('err-banner');
+  var titleEl  = document.getElementById('err-title');
+  var bodyEl   = document.getElementById('err-body');
+  var actionEl = document.getElementById('err-action');
+
+  /* Set banner style class */
+  var cls = 'generic';
+  if (errorType === ET.ORG_POLICY_BLOCKED)  cls = 'org-blocked';
+  else if (errorType === ET.SESSION_EXPIRED) cls = 'session';
+  else if (errorType === ET.FORBIDDEN)       cls = 'forbidden';
+  else if (errorType === ET.NETWORK_ERROR)   cls = 'network';
+
+  banner.className = 'err-banner on ' + cls;
+
+  /* Set content */
+  switch (errorType) {
+    case ET.ORG_POLICY_BLOCKED:
+      titleEl.textContent  = 'Acceso bloqueado por política de organización';
+      bodyEl.textContent   = TwoFA.getErrorMessage(ET.ORG_POLICY_BLOCKED);
+      actionEl.textContent = '¿Necesitas ayuda? Contacta con tu administrador TI o consulta la política de seguridad de tu organización.';
+      /* Log the underlying reason so admins can diagnose */
+      console.warn('[tugesto 2FA] Org policy block detected. Underlying reason:', rawReason || '(none provided)');
+      break;
+    case ET.SESSION_EXPIRED:
+      titleEl.textContent  = 'Sesión expirada';
+      bodyEl.textContent   = TwoFA.getErrorMessage(ET.SESSION_EXPIRED);
+      actionEl.innerHTML   = '<a href="/login" style="color:inherit;font-weight:700">Iniciar sesión de nuevo →</a>';
+      break;
+    case ET.FORBIDDEN:
+      titleEl.textContent  = 'Acceso no autorizado';
+      bodyEl.textContent   = TwoFA.getErrorMessage(ET.FORBIDDEN);
+      actionEl.textContent = 'Contacta con el administrador de tu cuenta si crees que esto es un error.';
+      break;
+    case ET.FEATURE_UNAVAILABLE:
+      titleEl.textContent  = 'Función no disponible';
+      bodyEl.textContent   = TwoFA.getErrorMessage(ET.FEATURE_UNAVAILABLE);
+      actionEl.textContent = 'Consulta con el soporte de tugesto para activar esta función en tu cuenta.';
+      break;
+    case ET.NETWORK_ERROR:
+      titleEl.textContent  = 'Error de conexión';
+      bodyEl.textContent   = TwoFA.getErrorMessage(ET.NETWORK_ERROR);
+      actionEl.innerHTML   = '<button style="background:none;border:none;color:inherit;font-weight:700;cursor:pointer;font-family:inherit;font-size:12px;padding:0" onclick="loadSetup()">Reintentar →</button>';
+      break;
+    default:
+      titleEl.textContent  = 'Error inesperado';
+      bodyEl.textContent   = TwoFA.getErrorMessage(ET.UNKNOWN);
+      actionEl.textContent = '';
+      break;
+  }
+}
+
+/* ── Verify code ─────────────────────────────────────────────────────────────── */
+function verifyCode() {
+  var code = (document.getElementById('totp-input').value || '').trim();
+  if (!/^\d{6}$/.test(code)) return;
+
+  var btn = document.getElementById('verify-btn');
+  btn.disabled = true;
+  btn.textContent = 'Verificando…';
+
+  fetch('/api/sessions/two-factor/app/verify', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: code })
+  })
+    .then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (body) {
+          throw { status: res.status, body: body, headers: headersToMap(res.headers) };
+        });
+      }
+      return res.json();
+    })
+    .then(function () {
+      var ok = document.getElementById('ok-msg');
+      if (ok) ok.classList.add('on');
+      btn.textContent = '✓ Activado';
+    })
+    .catch(function (err) {
+      btn.disabled    = false;
+      btn.textContent = 'Verificar y activar';
+      var status  = err && err.status  != null ? err.status  : null;
+      var body    = err && err.body    != null ? err.body    : '';
+      var headers = err && err.headers != null ? err.headers : {};
+      var errorType = TwoFA.classifyError(status, body, headers);
+      showError(errorType, body);
+    });
+}
+
+/* ── UI helpers ──────────────────────────────────────────────────────────────── */
+function toggleManual() {
+  var row = document.getElementById('manual-row');
+  row.style.display = row.style.display === 'none' ? 'block' : 'none';
+}
+
+function copySecret() {
+  var text = _secret || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function () {
+      flashCopy('¡Copiado!');
+    }).catch(function () {
+      legacyCopy(text);
+    });
+  } else {
+    legacyCopy(text);
+  }
+}
+
+function legacyCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'absolute';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { /* ignore */ }
+  document.body.removeChild(ta);
+  if (ok) {
+    flashCopy('¡Copiado!');
+  } else {
+    flashCopy('No se pudo copiar');
+  }
+}
+
+function flashCopy(msg) {
+  var btn = document.getElementById('copy-btn');
+  var orig = btn.textContent;
+  btn.textContent = msg;
+  setTimeout(function () { btn.textContent = orig; }, 1500);
+}
+
+function onCodeInput() {
+  var val = (document.getElementById('totp-input').value || '').replace(/\D/g, '');
+  document.getElementById('totp-input').value = val;
+  document.getElementById('verify-btn').disabled = val.length !== 6;
+}
+
+function formatSecret(s) {
+  return (s || '').toUpperCase().replace(/(.{4})/g, '$1 ').trim();
+}
+
+function headersToMap(headers) {
+  var map = {};
+  if (headers && typeof headers.forEach === 'function') {
+    headers.forEach(function (v, k) { map[k.toLowerCase()] = v; });
+  }
+  return map;
+}
+</script>
+</body>
+</html>
